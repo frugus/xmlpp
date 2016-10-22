@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+
+#
+# xmlpp - Extremely simple XML pretty printer.     Hugo Calendar,  hugo @ calendars . se
+#
+# Reads from stdin, writes to stdout.
+#
+# Errors out only if indentation becomes negative (too many </...>).
+# No other well-formed XML checking.
+#
+
+my $xmlStr;
+
+while (<>) {
+  $xmlStr.=$_;
+}
+
+$xmlStr =~ s///g;
+$xmlStr =~ s/\n//g;
+$xmlStr =~ s/\t/ /g;
+while ($xmlStr =~ /  /) {
+    $xmlStr =~ s/  / /g;
+}
+
+@xmlLines = $xmlStr =~ /<[^>]*>[^<]*/gsm; 
+$ppXml="";
+
+$indentation=0;
+foreach $line ( @xmlLines ) {
+    if ( ( $line =~ /<\// ) ) {	$indentation -= 2; }
+    &doIndent();
+
+    $line =~ /(<[^>]*>)([^<]*)/gsm; 
+    $ppXml .= "$1\n";
+
+    if ( ! ( ($line =~ /\/>/) || ($line =~ /<\//) ) ) {
+	$indentation += 2;
+    }
+    if ( ($line =~ /<\?/) || ($line =~ /<!/) ) {
+	$indentation -= 2;
+    }
+
+    if ( ! ( ("$2" eq "") || ( "$2" eq " ") ) ) {
+      &doIndent();
+      $ppXml .= "$2\n";
+    }
+
+    if ($indentation < 0) {
+	die "\n\n POORLY FORMED XML.  EXIT.";;
+    }
+}
+
+# To have values between tags on their own indented lines, comment these two substitutions out
+$ppXml =~ s/(<[^>]*>)[\n ]+([^><\n ][^<]*)/$1$2/g;
+$ppXml =~ s/([^<>\n ])[\n ]*</$1</g;
+
+
+print $ppXml;
+
+
+sub doIndent {
+    for ($count=$indentation; $count>0; $count=$count-2 ) {
+	$ppXml .= "  ";
+    }
+}
